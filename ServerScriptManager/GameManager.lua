@@ -1,5 +1,5 @@
--- VILLAGE GAME WITH HOUSE OWNERSHIP + SHOP SIGNS
-print("?? Starting Village Game with Houses & Signs...")
+-- VILLAGE GAME WITH HOUSE OWNERSHIP + SHOP SIGNS (FIXED & ENHANCED)
+print("🏘️ Starting Village Game with Houses & Signs...")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 local houseDataStore = DataStoreService:GetDataStore("HouseOwnership_v1")
@@ -13,7 +13,7 @@ for _, eventName in ipairs(remoteEvents) do
 	remoteEvent.Name = eventName
 	remoteEvent.Parent = remoteEventsFolder
 end
-print("? Created RemoteEvents")
+print("✅ Created RemoteEvents")
 wait(1)
 -- House ownership data
 local houseOwners = {}
@@ -21,7 +21,7 @@ local houseOwners = {}
 -- VILLAGE BUILDER WITH HOUSES & SHOP SIGNS
 -- ============================================
 local function buildVillage()
-	print("??? Building Village...")
+	print("🏗️ Building Village...")
 	local workspace = game.Workspace
 	-- Ground
 	local baseplate = Instance.new("Part")
@@ -43,8 +43,18 @@ local function buildVillage()
 
 	-- House prices (varied)
 	local housePrices = {500, 750, 1000, 500, 1250, 750, 1500, 1000, 2000, 1250, 1500, 750}
+	
+	-- House colors (variety based on price)
+	local houseColors = {
+		BrickColor.new("Bright red"),
+		BrickColor.new("Bright orange"),
+		BrickColor.new("Bright yellow"),
+		BrickColor.new("Lime green"),
+		BrickColor.new("Bright blue"),
+		BrickColor.new("Bright violet")
+	}
 
-	-- Create 12 Houses with ClickDetectors
+	-- Create 12 Houses with ClickDetectors + ENHANCEMENTS
 	for i = 1, 12 do
 		local angle = (2 * math.pi / 12) * (i - 1)
 		local x = math.cos(angle) * houseRadius
@@ -55,7 +65,7 @@ local function buildVillage()
 		house.Size = Vector3.new(20, 15, 20)
 		house.Position = Vector3.new(x, 7.5, z)
 		house.Anchored = true
-		house.BrickColor = BrickColor.new("Bright red")
+		house.BrickColor = houseColors[((i-1) % 6) + 1] -- Variety!
 		house.Parent = villageFolder
 
 		-- Store price in house
@@ -68,6 +78,14 @@ local function buildVillage()
 		local clickDetector = Instance.new("ClickDetector")
 		clickDetector.MaxActivationDistance = 15
 		clickDetector.Parent = house
+		
+		-- Add Highlight effect (NEW!)
+		local highlight = Instance.new("Highlight")
+		highlight.Enabled = false
+		highlight.FillColor = Color3.fromRGB(255, 255, 0)
+		highlight.OutlineColor = Color3.fromRGB(255, 215, 0)
+		highlight.FillTransparency = 0.5
+		highlight.Parent = house
 
 		local roof = Instance.new("WedgePart")
 		roof.Size = Vector3.new(20, 8, 22)
@@ -76,6 +94,27 @@ local function buildVillage()
 		roof.BrickColor = BrickColor.new("Reddish brown")
 		roof.Orientation = Vector3.new(0, 90, 0)
 		roof.Parent = house
+		
+		-- Add Door (NEW!)
+		local door = Instance.new("Part")
+		door.Name = "Door"
+		door.Size = Vector3.new(5, 10, 0.5)
+		door.Position = Vector3.new(x, 5, z + 10)
+		door.Anchored = true
+		door.BrickColor = BrickColor.new("Dark oak")
+		door.Parent = house
+		
+		-- Add Windows (NEW!)
+		for w = 1, 2 do
+			local window = Instance.new("Part")
+			window.Size = Vector3.new(3, 4, 0.2)
+			window.Position = Vector3.new(x + (w == 1 and -6 or 6), 10, z + 10)
+			window.BrickColor = BrickColor.new("Light blue")
+			window.Material = Enum.Material.Glass
+			window.Transparency = 0.3
+			window.Anchored = true
+			window.Parent = house
+		end
 
 		-- Owner sign (initially hidden)
 		local signPart = Instance.new("Part")
@@ -103,8 +142,65 @@ local function buildVillage()
 		ownerLabel.Font = Enum.Font.GothamBold
 		ownerLabel.TextStrokeTransparency = 0.5
 		ownerLabel.Parent = billboardGui
+		
+		-- Price Sign in front of house (NEW!)
+		local priceSign = Instance.new("Part")
+		priceSign.Name = "PriceSign"
+		priceSign.Size = Vector3.new(8, 4, 0.5)
+		priceSign.Position = Vector3.new(x, 4, z + 12)
+		priceSign.Anchored = true
+		priceSign.Transparency = 1
+		priceSign.CanCollide = false
+		priceSign.Parent = house
+
+		local priceBillboard = Instance.new("BillboardGui")
+		priceBillboard.Size = UDim2.new(0, 150, 0, 40)
+		priceBillboard.AlwaysOnTop = true
+		priceBillboard.Parent = priceSign
+
+		local priceLabel = Instance.new("TextLabel")
+		priceLabel.Name = "PriceLabel"
+		priceLabel.Size = UDim2.new(1, 0, 1, 0)
+		priceLabel.BackgroundTransparency = 1
+		priceLabel.Text = "🏠 " .. housePrices[i] .. " Coins"
+		priceLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+		priceLabel.TextSize = 18
+		priceLabel.Font = Enum.Font.GothamBold
+		priceLabel.TextStrokeTransparency = 0.5
+		priceLabel.Parent = priceBillboard
 	end
-	print("?? Created 12 houses with purchase system")
+	print("🏘️ Created 12 houses with purchase system")
+	
+	-- Add Street Lamps (NEW!)
+	for i = 1, 12 do
+		local angle = (2 * math.pi / 12) * (i - 1)
+		local x = math.cos(angle) * (houseRadius - 30)
+		local z = math.sin(angle) * (houseRadius - 30)
+		
+		local lampPost = Instance.new("Part")
+		lampPost.Size = Vector3.new(1, 12, 1)
+		lampPost.Position = Vector3.new(x, 6, z)
+		lampPost.Anchored = true
+		lampPost.BrickColor = BrickColor.new("Black")
+		lampPost.Material = Enum.Material.Metal
+		lampPost.Parent = villageFolder
+		
+		local lampLight = Instance.new("Part")
+		lampLight.Size = Vector3.new(3, 3, 3)
+		lampLight.Position = Vector3.new(x, 13, z)
+		lampLight.Anchored = true
+		lampLight.BrickColor = BrickColor.new("Bright yellow")
+		lampLight.Material = Enum.Material.Neon
+		lampLight.Shape = Enum.PartType.Ball
+		lampLight.Parent = lampPost
+		
+		local pointLight = Instance.new("PointLight")
+		pointLight.Brightness = 2
+		pointLight.Range = 40
+		pointLight.Color = Color3.fromRGB(255, 230, 150)
+		pointLight.Parent = lampLight
+	end
+	print("💡 Added street lamps")
 
 	-- Create 4 Shops WITH SIGNS
 	local shops = {
@@ -156,7 +252,7 @@ local function buildVillage()
 		shopLabel.TextStrokeTransparency = 0.3
 		shopLabel.Parent = billboardGui
 	end
-	print("?? Created 4 shops with name signs")
+	print("🏪 Created 4 shops with name signs")
 
 	-- Market Stalls
 	for i = 1, 6 do
@@ -232,7 +328,7 @@ local function buildVillage()
 	spawn.CanCollide = false
 	spawn.Parent = villageFolder
 
-	print("? Village Created!")
+	print("✅ Village Created!")
 
 end
 -- ============================================
@@ -244,9 +340,9 @@ local function loadHouseOwnership()
 	end)
 	if success and data then
 		houseOwners = data
-		print("?? Loaded house ownership data")
+		print("💾 Loaded house ownership data")
 	else
-		print("?? No existing house data")
+		print("💾 No existing house data")
 	end
 
 end
@@ -258,6 +354,27 @@ end
 local function updateHouseSign(houseName, ownerName)
 	local house = workspace.Village:FindFirstChild(houseName)
 	if house then
+		-- Change house appearance when purchased (NEW!)
+		if ownerName then
+			house.BrickColor = BrickColor.new("Gold")
+			-- Add sparkle effect
+			if not house:FindFirstChild("Sparkles") then
+				local sparkles = Instance.new("Sparkles")
+				sparkles.Parent = house
+			end
+			-- Hide price sign
+			local priceSign = house:FindFirstChild("PriceSign")
+			if priceSign then
+				local billboard = priceSign:FindFirstChild("BillboardGui")
+				if billboard then
+					local label = billboard:FindFirstChild("PriceLabel")
+					if label then
+						label.Visible = false
+					end
+				end
+			end
+		end
+		
 		local ownerSign = house:FindFirstChild("OwnerSign")
 		if ownerSign then
 			local billboardGui = ownerSign:FindFirstChild("BillboardGui")
@@ -265,7 +382,7 @@ local function updateHouseSign(houseName, ownerName)
 				local ownerLabel = billboardGui:FindFirstChild("OwnerLabel")
 				if ownerLabel then
 					if ownerName then
-						ownerLabel.Text = "OWNED BY " .. string.upper(ownerName)
+						ownerLabel.Text = "✨ OWNED BY " .. string.upper(ownerName) .. " ✨"
 					else
 						ownerLabel.Text = ""
 					end
@@ -275,10 +392,18 @@ local function updateHouseSign(houseName, ownerName)
 	end
 end
 local function initializeHouseSystem()
-	print("?? Initializing House System...")
+	print("🏠 Initializing House System...")
 	loadHouseOwnership()
+	
+	-- CRITICAL FIX: Wait for Village folder to exist
+	local villageFolder = workspace:WaitForChild("Village", 10)
+	if not villageFolder then
+		warn("❌ Village folder not found! Cannot initialize house system.")
+		return
+	end
+	print("✅ Village folder found")
 
-	-- Update all house signs
+	-- Update all house signs from saved data
 	for houseName, ownerName in pairs(houseOwners) do
 		updateHouseSign(houseName, ownerName)
 	end
@@ -288,39 +413,69 @@ local function initializeHouseSystem()
 	local updateCurrencyEvent = remoteEventsFolder:WaitForChild("UpdateCurrency")
 	local showMessageEvent = remoteEventsFolder:WaitForChild("ShowMessage")
 
-	-- House click handlers
-	wait(1) -- Wait for village to be fully created
-	for _, house in pairs(workspace.Village:GetChildren()) do
+	-- CRITICAL FIX: House click handlers (now runs AFTER village is built)
+	local houseCount = 0
+	for _, house in pairs(villageFolder:GetChildren()) do
 		if house.Name:match("^House_") and house:FindFirstChild("ClickDetector") then
+			houseCount = houseCount + 1
+			
+			-- Add hover highlight (NEW!)
+			local highlight = house:FindFirstChild("Highlight")
+			if highlight then
+				house.ClickDetector.MouseHoverEnter:Connect(function()
+					highlight.Enabled = true
+				end)
+				house.ClickDetector.MouseHoverLeave:Connect(function()
+					highlight.Enabled = false
+				end)
+			end
+			
+			-- Click to purchase
 			house.ClickDetector.MouseClick:Connect(function(player)
 				local price = house:FindFirstChild("Price")
 				if price then
 					local owner = houseOwners[house.Name]
-					print("?? Player clicked " .. house.Name .. " (Price: " .. price.Value .. ")")
+					print("🖱️ Player " .. player.Name .. " clicked " .. house.Name .. " (Price: " .. price.Value .. ")")
 					showHousePurchaseEvent:FireClient(player, house.Name, price.Value, owner)
 				end
 			end)
+			print("✅ Added click handler for " .. house.Name)
 		end
 	end
+	print("✅ Initialized " .. houseCount .. " house click detectors")
 
 	-- Buy house handler
 	buyHouseEvent.OnServerEvent:Connect(function(player, houseName)
+		print("🏠 Player " .. player.Name .. " attempting to buy " .. houseName)
 		local house = workspace.Village:FindFirstChild(houseName)
-		if not house then return end
+		if not house then 
+			print("❌ House not found: " .. houseName)
+			return 
+		end
 
 		local price = house:FindFirstChild("Price")
-		if not price then return end
+		if not price then 
+			print("❌ Price not found for " .. houseName)
+			return 
+		end
 
 		-- Check if already owned
 		if houseOwners[houseName] then
-			showMessageEvent:FireClient(player, "? This house is already owned!", "error")
+			print("❌ House already owned by " .. houseOwners[houseName])
+			showMessageEvent:FireClient(player, "❌ This house is already owned!", "error")
 			return
 		end
 
 		local leaderstats = player:FindFirstChild("leaderstats")
-		if not leaderstats then return end
+		if not leaderstats then 
+			print("❌ No leaderstats for " .. player.Name)
+			return 
+		end
 		local coins = leaderstats:FindFirstChild("Coins")
-		if not coins then return end
+		if not coins then 
+			print("❌ No coins for " .. player.Name)
+			return 
+		end
 
 		if coins.Value >= price.Value then
 			coins.Value = coins.Value - price.Value
@@ -330,13 +485,15 @@ local function initializeHouseSystem()
 			saveHouseOwnership()
 
 			updateCurrencyEvent:FireClient(player, coins.Value)
-			showMessageEvent:FireClient(player, "? Purchased " .. houseName .. "!", "success")
+			showMessageEvent:FireClient(player, "✅ Purchased " .. houseName .. "!", "success")
+			print("✅ " .. player.Name .. " successfully purchased " .. houseName)
 		else
-			showMessageEvent:FireClient(player, "? Not enough coins! Need " .. price.Value, "error")
+			print("❌ " .. player.Name .. " has insufficient funds (" .. coins.Value .. "/" .. price.Value .. ")")
+			showMessageEvent:FireClient(player, "❌ Not enough coins! Need " .. price.Value, "error")
 		end
 	end)
 
-	print("? House System Ready!")
+	print("✅ House System Ready!")
 
 end
 -- ============================================
@@ -369,7 +526,7 @@ local shopInventories = {
 	}
 }
 local function initializeTradingSystem()
-	print("?? Initializing Trading...")
+	print("🛒 Initializing Trading...")
 	local buyEvent = remoteEventsFolder:WaitForChild("BuyItem")
 	local showShopEvent = remoteEventsFolder:WaitForChild("ShowShop")
 	local updateCurrencyEvent = remoteEventsFolder:WaitForChild("UpdateCurrency")
@@ -405,19 +562,20 @@ local function initializeTradingSystem()
 			item.Parent = inventory
 
 			updateCurrencyEvent:FireClient(player, coins.Value)
-			showMessageEvent:FireClient(player, "? Purchased " .. itemName .. "!", "success")
+			showMessageEvent:FireClient(player, "✅ Purchased " .. itemName .. "!", "success")
 		else
-			showMessageEvent:FireClient(player, "? Not enough coins!", "error")
+			showMessageEvent:FireClient(player, "❌ Not enough coins!", "error")
 		end
 	end)
 
-	print("? Trading Ready!")
+	print("✅ Trading Ready!")
 
 end
 -- ============================================
 -- PLAYER MANAGEMENT
 -- ============================================
 local function setupPlayer(player)
+	print("👤 Setting up player: " .. player.Name)
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	leaderstats.Parent = player
@@ -433,21 +591,25 @@ local function setupPlayer(player)
 
 	wait(1)
 	remoteEventsFolder.UpdateCurrency:FireClient(player, 3000)
+	print("✅ Player " .. player.Name .. " setup complete")
 
 end
 -- ============================================
 -- INITIALIZE
 -- ============================================
+print("🚀 Starting initialization sequence...")
 buildVillage()
+print("✅ Village built, now initializing systems...")
 initializeHouseSystem()
 initializeTradingSystem()
 game.Players.PlayerAdded:Connect(setupPlayer)
-print("? Game Ready with Houses & Shop Signs!")
+print("✅ Game Ready with Houses & Shop Signs!")
+print("📊 Debug: Village has " .. #workspace.Village:GetChildren() .. " objects")
 -- Auto-save house ownership every 5 minutes
 spawn(function()
 	while true do
 		wait(300)
 		saveHouseOwnership()
-		print("?? Auto-saved house ownership")
+		print("💾 Auto-saved house ownership")
 	end
 end)
