@@ -469,11 +469,13 @@ local function initializeHouseSystem()
 		local leaderstats = player:FindFirstChild("leaderstats")
 		if not leaderstats then 
 			print("❌ No leaderstats for " .. player.Name)
+			showMessageEvent:FireClient(player, "❌ Player data not ready. Please wait a moment!", "error")
 			return 
 		end
 		local coins = leaderstats:FindFirstChild("Coins")
 		if not coins then 
 			print("❌ No coins for " .. player.Name)
+			showMessageEvent:FireClient(player, "❌ Coin data not ready. Please wait a moment!", "error")
 			return 
 		end
 
@@ -576,6 +578,13 @@ end
 -- ============================================
 local function setupPlayer(player)
 	print("👤 Setting up player: " .. player.Name)
+	
+	-- Check if player already has leaderstats (Studio auto-rejoin)
+	if player:FindFirstChild("leaderstats") then
+		print("⚠️ Player " .. player.Name .. " already has leaderstats, skipping setup")
+		return
+	end
+	
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	leaderstats.Parent = player
@@ -602,7 +611,17 @@ buildVillage()
 print("✅ Village built, now initializing systems...")
 initializeHouseSystem()
 initializeTradingSystem()
+
+-- Setup existing players (for Studio testing)
+print("🔍 Setting up existing players...")
+for _, player in pairs(game.Players:GetPlayers()) do
+	setupPlayer(player)
+end
+print("✅ Existing players setup complete")
+
+-- Setup new players
 game.Players.PlayerAdded:Connect(setupPlayer)
+
 print("✅ Game Ready with Houses & Shop Signs!")
 print("📊 Debug: Village has " .. #workspace.Village:GetChildren() .. " objects")
 -- Auto-save house ownership every 5 minutes
