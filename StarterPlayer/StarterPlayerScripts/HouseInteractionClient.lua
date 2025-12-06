@@ -4,9 +4,9 @@ print("🏠 Initializing House Interaction Client...")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local Mouse = game:GetMouse()
+local Players = game:GetService("Players")
 
-local player = game.Players.LocalPlayer
+local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
@@ -179,18 +179,27 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- Click to place furniture
-Mouse.Button2Down:Connect(function()
-	if isInHouse and selectedFurniture then
-		local targetPos = Mouse.Hit.Position
-		print("💫 Placing " .. selectedFurniture .. " at " .. tostring(targetPos))
-		placeFurnitureEvent:FireServer(selectedFurniture, targetPos)
-		selectedFurniture = nil
+-- Click to place furniture (Right click)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed or not isInHouse or not selectedFurniture then return end
+	
+	-- Right click to place furniture
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		-- Get mouse position and raycast
+		local camera = workspace.CurrentCamera
+		local mouse = player:GetMouse()
 		
-		-- Clear highlight
-		for _, button in pairs(furnitureList:GetChildren()) do
-			if button:IsA("TextButton") then
-				button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		if mouse.Target then
+			local targetPos = mouse.Hit.Position
+			print("💫 Placing " .. selectedFurniture .. " at " .. tostring(targetPos))
+			placeFurnitureEvent:FireServer(selectedFurniture, targetPos)
+			selectedFurniture = nil
+			
+			-- Clear highlight
+			for _, button in pairs(furnitureList:GetChildren()) do
+				if button:IsA("TextButton") then
+					button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+				end
 			end
 		end
 	end
