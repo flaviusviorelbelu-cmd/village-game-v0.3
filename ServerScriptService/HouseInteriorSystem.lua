@@ -25,6 +25,34 @@ exitHouseEvent.Parent = remoteEventsFolder
 print("✅ Created RemoteEvents")
 
 -- ============================================
+-- BEDROCK SUPPORT LAYER
+-- ============================================
+local function createBedrockSupport()
+	local bedrockFolder = Instance.new("Folder")
+	bedrockFolder.Name = "IslandSupport"
+	bedrockFolder.Parent = workspace
+	
+	-- Create a bedrock layer at Y=180 to catch any falling islands
+	local bedrock = Instance.new("Part")
+	bedrock.Name = "Bedrock"
+	bedrock.Shape = Enum.PartType.Block
+	bedrock.Size = Vector3.new(1000, 5, 1000)
+	bedrock.Position = Vector3.new(250, 177, 250)
+	bedrock.Color = Color3.fromRGB(50, 50, 50)
+	bedrock.Material = Enum.Material.Concrete
+	bedrock.CanCollide = true
+	bedrock.TopSurface = Enum.SurfaceType.Smooth
+	bedrock.BottomSurface = Enum.SurfaceType.Smooth
+	bedrock.Anchored = true
+	bedrock.Parent = bedrockFolder
+	
+	print("🗑️ Created bedrock support layer at Y=177")
+	return bedrockFolder
+end
+
+createBedrockSupport()
+
+-- ============================================
 -- HOUSE INTERIOR MANAGER
 -- ============================================
 local HouseInteriorManager = {}
@@ -36,12 +64,13 @@ HouseInteriorManager.doorCooldown = {} -- Prevent spam
 -- Create unique position for each house interior (separate islands)
 local function getInteriorPosition(houseNumber)
 	-- Create a grid of islands: 3 rows, 4 columns, spaced 100 studs apart
+	-- ALL at Y=200 for consistent height
 	local row = math.floor((houseNumber - 1) / 4)
 	local col = (houseNumber - 1) % 4
 	
-	local x = col * 100
-	local y = 200 -- High up to avoid collision with village
-	local z = row * 100
+	local x = col * 100 + 250
+	local y = 200 -- FIXED HEIGHT - HIGH UP
+	local z = row * 100 + 250
 	
 	return Vector3.new(x, y, z)
 end
@@ -88,14 +117,15 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	local pillar = Instance.new("Part")
 	pillar.Name = "Pillar"
 	pillar.Shape = Enum.PartType.Block
-	pillar.Size = Vector3.new(40, 10, 40)
-	pillar.Position = basePosition - Vector3.new(0, 6, 0)
+	pillar.Size = Vector3.new(40, 200, 40)
+	pillar.Position = basePosition - Vector3.new(0, 101, 0)
 	pillar.Color = Color3.fromRGB(100, 100, 100)
 	pillar.Material = Enum.Material.Concrete
-	pillar.CanCollide = true
+	pillar.CanCollide = false -- Invisible support
 	pillar.TopSurface = Enum.SurfaceType.Smooth
 	pillar.BottomSurface = Enum.SurfaceType.Smooth
 	pillar.Anchored = true
+	pillar.Transparency = 1 -- Invisible
 	pillar.Parent = interior
 	
 	-- Create walls
@@ -190,7 +220,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 		spawnPoint = basePosition + Vector3.new(0, 2, 0), -- Center of island
 	}
 	
-	print("✅ Created interior for " .. houseName .. " at Y=" .. basePosition.Y)
+	print("✅ Created interior for " .. houseName .. " at Y=" .. basePosition.Y .. " (Position: " .. tostring(basePosition) .. ")")
 	return interior
 end
 
