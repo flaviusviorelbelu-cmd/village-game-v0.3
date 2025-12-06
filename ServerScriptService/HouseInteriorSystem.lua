@@ -110,7 +110,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ceiling.BottomSurface = Enum.SurfaceType.Smooth
 	ceiling.Parent = interior
 	
-	-- Create EXIT PORTAL
+	-- Create EXIT PORTAL (BLUE DOOR)
 	local exitPortal = Instance.new("Part")
 	exitPortal.Name = "ExitPortal"
 	exitPortal.Shape = Enum.PartType.Block
@@ -133,30 +133,28 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	labelText.BackgroundTransparency = 0.5
 	labelText.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
 	labelText.TextScaled = true
-	labelText.Text = "🚪 Exit"
+	labelText.Text = "🚪 EXIT"
 	labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
 	labelText.Parent = portalLabel
 	
+	print("🚪 Created EXIT PORTAL in " .. houseName)
+	
+	-- Exit portal touch detection
 	exitPortal.Touched:Connect(function(hit)
 		if hit.Parent and hit.Parent:FindFirstChild("Humanoid") then
 			local player = Players:FindFirstChild(hit.Parent.Name)
 			if player then
+				print("🚪 " .. player.Name .. " touched exit portal")
 				self:ExitHouse(player)
 			end
 		end
 	end)
-	
-	-- Store furniture folder
-	local furnitureFolder = Instance.new("Folder")
-	furnitureFolder.Name = "Furniture"
-	furnitureFolder.Parent = interior
 	
 	-- Store interior in manager
 	self.interiors[houseName] = {
 		folder = interior,
 		owner = owner,
 		spawnPoint = Vector3.new(0, self.INTERIOR_Y_OFFSET + 2, 0),
-		furniture = {}
 	}
 	
 	print("✅ Created interior for " .. houseName .. " (Y=" .. self.INTERIOR_Y_OFFSET .. ")")
@@ -166,6 +164,7 @@ end
 -- Add white door to a house in the village
 function HouseInteriorManager:AddDoorToHouse(house, houseName)
 	if house:FindFirstChild("HouseDoor") then
+		print("⚠️ Door already exists for " .. houseName)
 		return
 	end
 	
@@ -192,7 +191,7 @@ function HouseInteriorManager:AddDoorToHouse(house, houseName)
 	labelText.BackgroundTransparency = 0.3
 	labelText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	labelText.TextScaled = true
-	labelText.Text = "🚪 Enter Home"
+	labelText.Text = "🚪 ENTER"
 	labelText.TextColor3 = Color3.fromRGB(0, 0, 0)
 	labelText.Parent = doorLabel
 	
@@ -223,14 +222,14 @@ function HouseInteriorManager:AddDoorToHouse(house, houseName)
 		if owner == player.Name or owner == "Admin" then
 			self:EnterHouse(player, houseName)
 		else
-			print("🚫 Access denied: " .. player.Name .. " is not owner")
+			print("🚫 Access denied")
 		end
 	end)
 	
 	-- Store door position
 	self.houseDoors[houseName] = door.Position
 	
-	print("✅ Added white door to " .. houseName)
+	print("🚪 Added white door to " .. houseName)
 end
 
 -- Teleport player into house
@@ -307,7 +306,7 @@ print("✅ Created Interior RemoteEvents")
 -- REMOTE EVENT HANDLERS
 -- ============================================
 
-entrHouseEvent.OnServerEvent:Connect(function(player, houseName)
+enterHouseEvent.OnServerEvent:Connect(function(player, houseName)
 	print("🏠 " .. player.Name .. " requested entry to " .. houseName)
 	HouseInteriorManager:EnterHouse(player, houseName)
 end)
@@ -329,13 +328,14 @@ local function initializeHouseDoors()
 		return
 	end
 	
+	print("🚪 Starting door initialization...")
 	for _, house in pairs(villageFolder:GetChildren()) do
 		if house.Name:match("^House_") then
 			HouseInteriorManager:AddDoorToHouse(house, house.Name)
 		end
 	end
 	
-	print("✅ House Door System Ready!")
+	print("🚪 House Door System Ready!")
 end
 
 initializeHouseDoors()
