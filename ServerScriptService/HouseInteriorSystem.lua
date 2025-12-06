@@ -39,6 +39,7 @@ print("✅ Created RemoteEvents")
 local HouseInteriorManager = {}
 HouseInteriorManager.interiors = {} -- Store all interiors
 HouseInteriorManager.playerHouses = {} -- Track which interior each player is in
+HouseInteriorManager.houseDoors = {} -- Track door positions for each house
 
 -- Furniture catalog with models
 HouseInteriorManager.furnitureCatalog = {
@@ -138,7 +139,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ceiling.BottomSurface = Enum.SurfaceType.Smooth
 	ceiling.Parent = interior
 	
-	-- Create exit portal (door)
+	-- Create exit portal (door inside house)
 	local exitPortal = Instance.new("Part")
 	exitPortal.Name = "ExitPortal"
 	exitPortal.Shape = Enum.PartType.Block
@@ -179,6 +180,57 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	return interior
 end
 
+-- Add white door to a house in the village
+function HouseInteriorManager:AddDoorToHouse(house, houseName)
+	if house:FindFirstChild("HouseDoor") then
+		return -- Door already exists
+	end
+	
+	local door = Instance.new("Part")
+	door.Name = "HouseDoor"
+	door.Shape = Enum.PartType.Block
+	door.Size = Vector3.new(2, 3, 0.3)
+	door.Color = Color3.fromRGB(255, 255, 255)  -- White
+	door.Material = Enum.Material.Wood
+	door.CanCollide = true
+	door.TopSurface = Enum.SurfaceType.Smooth
+	door.BottomSurface = Enum.SurfaceType.Smooth
+	
+	-- Position door at front of house
+	door.Position = house.Position + Vector3.new(0, 1.5, -3)
+	door.Parent = house
+	
+	-- Add click detector for enter prompt
+	local clickDetector = Instance.new("ClickDetector")
+	clickDetector.MaxActivationDistance = 30
+	clickDetector.Parent = door
+	
+	-- Handle door touch (teleport into house)
+	local touchConnection
+	touchConnection = door.Touched:Connect(function(hit)
+		if hit.Parent and hit.Parent:FindFirstChild("Humanoid") then
+			local character = hit.Parent
+			local player = Players:FindFirstChild(character.Name) or game.Players:FindFirstChild(character.Name)
+			
+			if player then
+				local ownerValue = house:FindFirstChild("Owner")
+				local owner = ownerValue and ownerValue.Value or "Admin"
+				
+				-- Allow owner and admin to enter
+				if owner == player.Name or owner == "Admin" then
+					print("🚪 " .. player.Name .. " walking into " .. houseName)
+					self:EnterHouse(player, houseName)
+				end
+			end
+		end
+	end)
+	
+	-- Store door position
+	self.houseDoors[houseName] = door.Position
+	
+	print("✅ Added white door to " .. houseName)
+end
+
 -- Teleport player into house
 function HouseInteriorManager:EnterHouse(player, houseName)
 	local houseData = self.interiors[houseName]
@@ -195,7 +247,6 @@ function HouseInteriorManager:EnterHouse(player, houseName)
 	
 	-- Store player's previous position
 	if not player:GetAttribute("PreviousPosition") then
-		local prevData = Instance.new("CFrame")
 		player:SetAttribute("PreviousPosition", humanoidRootPart.CFrame)
 	end
 	
@@ -221,9 +272,14 @@ function HouseInteriorManager:ExitHouse(player)
 	-- Teleport to house location in village
 	local houseName = player:GetAttribute("CurrentHouse")
 	if houseName then
-		local houseInVillage = workspace.Village:FindFirstChild(houseName)
-		if houseInVillage then
-			humanoidRootPart.CFrame = CFrame.new(houseInVillage.Position + Vector3.new(0, 5, 0))
+		local doorPos = self.houseDoors[houseName]
+		if doorPos then
+			humanoidRootPart.CFrame = CFrame.new(doorPos + Vector3.new(0, 0, -3))
+		else
+			local houseInVillage = workspace.Village:FindFirstChild(houseName)
+			if houseInVillage then
+				humanoidRootPart.CFrame = CFrame.new(houseInVillage.Position + Vector3.new(0, 5, 0))
+			end
 		end
 	end
 	
@@ -334,6 +390,9 @@ local function initializeExistingHouses()
 			
 			-- Create interior for each house
 			HouseInteriorManager:CreateInterior(house.Name, owner)
+			
+			-- Add white door to house
+			HouseInteriorManager:AddDoorToHouse(house, house.Name)
 		end
 	end
 	
