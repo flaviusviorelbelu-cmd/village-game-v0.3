@@ -114,7 +114,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 		wall.Size = wallSizes[i]
 		wall.Position = wallPositions[i]
 		wall.Color = wallColors[i]
-		wall.Material = Enum.Material.Drywall
+		wall.Material = Enum.Material.Brick
 		wall.CanCollide = true
 		wall.TopSurface = Enum.SurfaceType.Smooth
 		wall.BottomSurface = Enum.SurfaceType.Smooth
@@ -133,7 +133,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ceiling.Size = Vector3.new(30, 1, 30)
 	ceiling.Position = Vector3.new(0, 16, 0)
 	ceiling.Color = Color3.fromRGB(220, 220, 220)
-	ceiling.Material = Enum.Material.Drywall
+	ceiling.Material = Enum.Material.Brick
 	ceiling.CanCollide = true
 	ceiling.TopSurface = Enum.SurfaceType.Smooth
 	ceiling.BottomSurface = Enum.SurfaceType.Smooth
