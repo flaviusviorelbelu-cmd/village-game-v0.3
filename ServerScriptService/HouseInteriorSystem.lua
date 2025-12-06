@@ -31,8 +31,20 @@ local HouseInteriorManager = {}
 HouseInteriorManager.interiors = {} -- Store all interiors by house name
 HouseInteriorManager.playerHouses = {} -- Track which interior each player is in
 HouseInteriorManager.houseDoors = {} -- Track door positions for each house
-HouseInteriorManager.INTERIOR_Y_OFFSET = 100 -- Interiors at Y+100 to avoid collision
 HouseInteriorManager.doorCooldown = {} -- Prevent spam
+
+-- Create unique position for each house interior (separate islands)
+local function getInteriorPosition(houseNumber)
+	-- Create a grid of islands: 3 rows, 4 columns, spaced 100 studs apart
+	local row = math.floor((houseNumber - 1) / 4)
+	local col = (houseNumber - 1) % 4
+	
+	local x = col * 100
+	local y = 200 -- High up to avoid collision with village
+	local z = row * 100
+	
+	return Vector3.new(x, y, z)
+end
 
 -- Create a house interior (LAZY LOADED - only when player enters)
 function HouseInteriorManager:CreateInterior(houseName, owner)
@@ -40,6 +52,9 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	if self.interiors[houseName] then
 		return self.interiors[houseName].folder
 	end
+	
+	local houseNumber = tonumber(houseName:match("House_(%d+)")) or 1
+	local basePosition = getInteriorPosition(houseNumber)
 	
 	local interior = Instance.new("Folder")
 	interior.Name = houseName .. "_Interior"
@@ -55,32 +70,47 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ownerValue.Value = owner
 	ownerValue.Parent = metadata
 	
-	-- Create floor at elevated Y position
+	-- Create floor at island position
 	local floor = Instance.new("Part")
 	floor.Name = "Floor"
 	floor.Shape = Enum.PartType.Block
-	floor.Size = Vector3.new(30, 1, 30)
-	floor.Position = Vector3.new(0, self.INTERIOR_Y_OFFSET, 0)
+	floor.Size = Vector3.new(40, 1, 40)
+	floor.Position = basePosition
 	floor.Color = Color3.fromRGB(139, 90, 43)
 	floor.Material = Enum.Material.Wood
 	floor.CanCollide = true
 	floor.TopSurface = Enum.SurfaceType.Smooth
 	floor.BottomSurface = Enum.SurfaceType.Smooth
+	floor.Anchored = true -- ANCHOR TO PREVENT FALLING
 	floor.Parent = interior
+	
+	-- Create support pillar under floor (invisible foundation)
+	local pillar = Instance.new("Part")
+	pillar.Name = "Pillar"
+	pillar.Shape = Enum.PartType.Block
+	pillar.Size = Vector3.new(40, 10, 40)
+	pillar.Position = basePosition - Vector3.new(0, 6, 0)
+	pillar.Color = Color3.fromRGB(100, 100, 100)
+	pillar.Material = Enum.Material.Concrete
+	pillar.CanCollide = true
+	pillar.TopSurface = Enum.SurfaceType.Smooth
+	pillar.BottomSurface = Enum.SurfaceType.Smooth
+	pillar.Anchored = true
+	pillar.Parent = interior
 	
 	-- Create walls
 	local wallPositions = {
-		Vector3.new(0, self.INTERIOR_Y_OFFSET + 8, 15),
-		Vector3.new(0, self.INTERIOR_Y_OFFSET + 8, -15),
-		Vector3.new(15, self.INTERIOR_Y_OFFSET + 8, 0),
-		Vector3.new(-15, self.INTERIOR_Y_OFFSET + 8, 0)
+		basePosition + Vector3.new(0, 10, 20),  -- Back wall
+		basePosition + Vector3.new(0, 10, -20), -- Front wall
+		basePosition + Vector3.new(20, 10, 0),  -- Right wall
+		basePosition + Vector3.new(-20, 10, 0)  -- Left wall
 	}
 	
 	local wallSizes = {
-		Vector3.new(30, 16, 1),
-		Vector3.new(30, 16, 1),
-		Vector3.new(1, 16, 30),
-		Vector3.new(1, 16, 30)
+		Vector3.new(40, 20, 1),
+		Vector3.new(40, 20, 1),
+		Vector3.new(1, 20, 40),
+		Vector3.new(1, 20, 40)
 	}
 	
 	for i = 1, 4 do
@@ -94,6 +124,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 		wall.CanCollide = true
 		wall.TopSurface = Enum.SurfaceType.Smooth
 		wall.BottomSurface = Enum.SurfaceType.Smooth
+		wall.Anchored = true -- ANCHOR
 		wall.Parent = interior
 	end
 	
@@ -101,13 +132,14 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	local ceiling = Instance.new("Part")
 	ceiling.Name = "Ceiling"
 	ceiling.Shape = Enum.PartType.Block
-	ceiling.Size = Vector3.new(30, 1, 30)
-	ceiling.Position = Vector3.new(0, self.INTERIOR_Y_OFFSET + 16, 0)
+	ceiling.Size = Vector3.new(40, 1, 40)
+	ceiling.Position = basePosition + Vector3.new(0, 20, 0)
 	ceiling.Color = Color3.fromRGB(220, 220, 220)
 	ceiling.Material = Enum.Material.Brick
 	ceiling.CanCollide = true
 	ceiling.TopSurface = Enum.SurfaceType.Smooth
 	ceiling.BottomSurface = Enum.SurfaceType.Smooth
+	ceiling.Anchored = true -- ANCHOR
 	ceiling.Parent = interior
 	
 	-- Create EXIT PORTAL (BLUE DOOR)
@@ -115,11 +147,12 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	exitPortal.Name = "ExitPortal"
 	exitPortal.Shape = Enum.PartType.Block
 	exitPortal.Size = Vector3.new(3, 4, 0.5)
-	exitPortal.Position = Vector3.new(0, self.INTERIOR_Y_OFFSET + 2, -14.5)
+	exitPortal.Position = basePosition + Vector3.new(0, 2, -20)
 	exitPortal.Color = Color3.fromRGB(100, 200, 255)
 	exitPortal.Material = Enum.Material.Neon
 	exitPortal.CanCollide = false
 	exitPortal.Transparency = 0.2
+	exitPortal.Anchored = true -- ANCHOR
 	exitPortal.Parent = interior
 	
 	-- Add label to exit portal
@@ -137,7 +170,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
 	labelText.Parent = portalLabel
 	
-	print("🚪 Created EXIT PORTAL in " .. houseName)
+	print("🚪 Created EXIT PORTAL in " .. houseName .. " at position " .. tostring(basePosition))
 	
 	-- Exit portal touch detection
 	exitPortal.Touched:Connect(function(hit)
@@ -154,10 +187,10 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	self.interiors[houseName] = {
 		folder = interior,
 		owner = owner,
-		spawnPoint = Vector3.new(0, self.INTERIOR_Y_OFFSET + 2, 0),
+		spawnPoint = basePosition + Vector3.new(0, 2, 0), -- Center of island
 	}
 	
-	print("✅ Created interior for " .. houseName .. " (Y=" .. self.INTERIOR_Y_OFFSET .. ")")
+	print("✅ Created interior for " .. houseName .. " at Y=" .. basePosition.Y)
 	return interior
 end
 
@@ -177,6 +210,7 @@ function HouseInteriorManager:AddDoorToHouse(house, houseName)
 	door.CanCollide = true
 	door.TopSurface = Enum.SurfaceType.Smooth
 	door.BottomSurface = Enum.SurfaceType.Smooth
+	door.Anchored = false -- Let it be part of house collision
 	door.Position = house.Position + Vector3.new(0, 1.5, -3)
 	door.Parent = house
 	
@@ -260,7 +294,7 @@ function HouseInteriorManager:EnterHouse(player, houseName)
 	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 	if not humanoidRootPart then return false end
 	
-	-- Teleport into house
+	-- Teleport into house (spawn above floor)
 	humanoidRootPart.CFrame = CFrame.new(houseData.spawnPoint + Vector3.new(0, 3, 0))
 	
 	-- Mark player as being in house
