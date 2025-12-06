@@ -212,7 +212,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			interiorPanel.Visible = interiorOpen
 			print(interiorOpen and "🏠 Interior UI opened" or "🏠 Interior UI closed")
 		end
-	end
 	-- Press 'E' to enter a nearby house
 	elseif input.KeyCode == Enum.KeyCode.E then
 		print("🧐 Looking for nearby houses...")
@@ -226,7 +225,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					interiorOpen = true
 					interiorPanel.Visible = true
 					break
-			end
+				end
 			end
 		end
 	end
@@ -257,7 +256,6 @@ for _, button in pairs(furnitureList:GetChildren()) do
 end
 
 -- Listen for mouse clicks in the interior
-local UserInputService = game:GetService("UserInputService")
 local Mouse = player:GetMouse()
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
