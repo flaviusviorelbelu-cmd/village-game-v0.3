@@ -25,40 +25,11 @@ exitHouseEvent.Parent = remoteEventsFolder
 print("✅ Created RemoteEvents")
 
 -- ============================================
--- BEDROCK SUPPORT LAYER
--- ============================================
-local function createBedrockSupport()
-	local bedrockFolder = Instance.new("Folder")
-	bedrockFolder.Name = "IslandSupport"
-	bedrockFolder.Parent = workspace
-	
-	-- Create a bedrock layer at Y=180 to catch any falling islands
-	local bedrock = Instance.new("Part")
-	bedrock.Name = "Bedrock"
-	bedrock.Shape = Enum.PartType.Block
-	bedrock.Size = Vector3.new(1000, 5, 1000)
-	bedrock.Position = Vector3.new(250, 177, 250)
-	bedrock.Color = Color3.fromRGB(50, 50, 50)
-	bedrock.Material = Enum.Material.Concrete
-	bedrock.CanCollide = true
-	bedrock.TopSurface = Enum.SurfaceType.Smooth
-	bedrock.BottomSurface = Enum.SurfaceType.Smooth
-	bedrock.Anchored = true
-	bedrock.Parent = bedrockFolder
-	
-	print("🗑️ Created bedrock support layer at Y=177")
-	return bedrockFolder
-end
-
-createBedrockSupport()
-
--- ============================================
 -- HOUSE INTERIOR MANAGER
 -- ============================================
 local HouseInteriorManager = {}
 HouseInteriorManager.interiors = {} -- Store all interiors by house name
 HouseInteriorManager.playerHouses = {} -- Track which interior each player is in
-HouseInteriorManager.housePositionsInVillage = {} -- Store VILLAGE house positions for exit
 HouseInteriorManager.doorCooldown = {} -- Prevent spam
 
 -- Create unique position for each house interior (separate islands)
@@ -76,7 +47,7 @@ local function getInteriorPosition(houseNumber)
 end
 
 -- Create a house interior (LAZY LOADED - only when player enters)
-function HouseInteriorManager:CreateInterior(houseName, owner, villageHousePosition)
+function HouseInteriorManager:CreateInterior(houseName, owner)
 	-- Check if already created
 	if self.interiors[houseName] then
 		return self.interiors[houseName].folder
@@ -220,10 +191,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner, villageHousePosit
 		spawnPoint = basePosition + Vector3.new(0, 2, 0), -- Center of island
 	}
 	
-	-- Store VILLAGE house position for exit
-	self.housePositionsInVillage[houseName] = villageHousePosition
-	
-	print("✅ Created interior for " .. houseName .. " at Y=" .. basePosition.Y .. " (Position: " .. tostring(basePosition) .. ")")
+	print("✅ Created interior for " .. houseName .. " at Y=" .. basePosition.Y)
 	return interior
 end
 
@@ -293,7 +261,7 @@ function HouseInteriorManager:AddDoorToHouse(house, houseName)
 		end
 	end)
 	
-	print("🚪 Added white door to " .. houseName .. " at position " .. tostring(house.Position))
+	print("🚪 Added white door to " .. houseName)
 end
 
 -- Teleport player into house
@@ -309,8 +277,7 @@ function HouseInteriorManager:EnterHouse(player, houseName)
 		local ownerValue = house:FindFirstChild("Owner")
 		local owner = ownerValue and ownerValue.Value or "Admin"
 		
-		-- Pass village house position when creating interior
-		self:CreateInterior(houseName, owner, house.Position)
+		self:CreateInterior(houseName, owner)
 	end
 	
 	local houseData = self.interiors[houseName]
@@ -344,24 +311,14 @@ function HouseInteriorManager:ExitHouse(player)
 	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 	if not humanoidRootPart then return false end
 	
-	local houseName = player:GetAttribute("CurrentHouse")
-	if houseName then
-		-- GET VILLAGE HOUSE POSITION (not door position!)
-		local villageHousePos = self.housePositionsInVillage[houseName]
-		
-		if villageHousePos then
-			-- Teleport just outside the house in the village
-			local exitPos = villageHousePos + Vector3.new(0, 5, -5)
-			humanoidRootPart.CFrame = CFrame.new(exitPos)
-			print("🚪 " .. player.Name .. " exiting to " .. tostring(exitPos))
-		else
-			-- Fallback: teleport to village center
-			humanoidRootPart.CFrame = CFrame.new(Vector3.new(0, 5, 0))
-			print("⚠️ " .. player.Name .. " no exit position, fallback to center")
-		end
-	end
+	-- TELEPORT TO SPAWN POINT (Y=0), not door or stuck in roof!
+	local spawnPoint = Vector3.new(0, 5, 0)
+	humanoidRootPart.CFrame = CFrame.new(spawnPoint)
+	
+	print("🚪 " .. player.Name .. " exiting to spawn point " .. tostring(spawnPoint))
 	
 	-- Clear house data
+	local houseName = player:GetAttribute("CurrentHouse")
 	self.playerHouses[player.UserId] = nil
 	player:SetAttribute("CurrentHouse", nil)
 	
