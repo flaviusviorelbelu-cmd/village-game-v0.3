@@ -1,5 +1,6 @@
 -- HOUSE INTERIOR SYSTEM
 -- Creates interior spaces for owned houses with teleportation
+-- Interiors are created on-demand (lazy loading) to avoid overlapping with village
 print("🏠 Initializing House Interior System...")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -37,9 +38,10 @@ print("✅ Created RemoteEvents")
 -- HOUSE INTERIOR MANAGER
 -- ============================================
 local HouseInteriorManager = {}
-HouseInteriorManager.interiors = {} -- Store all interiors
+HouseInteriorManager.interiors = {} -- Store all interiors by house name
 HouseInteriorManager.playerHouses = {} -- Track which interior each player is in
 HouseInteriorManager.houseDoors = {} -- Track door positions for each house
+HouseInteriorManager.INTERIOR_Y_OFFSET = 100 -- Interiors at Y+100 to avoid collision
 
 -- Furniture catalog with models
 HouseInteriorManager.furnitureCatalog = {
@@ -56,8 +58,13 @@ HouseInteriorManager.furnitureCatalog = {
 	rug = { name = "🧵 Rug", price = 80, size = Vector3.new(3, 0.1, 3) },
 }
 
--- Create a house interior
+-- Create a house interior (LAZY LOADED - only when player enters)
 function HouseInteriorManager:CreateInterior(houseName, owner)
+	-- Check if already created
+	if self.interiors[houseName] then
+		return self.interiors[houseName].folder
+	end
+	
 	local interior = Instance.new("Folder")
 	interior.Name = houseName .. "_Interior"
 	interior.Parent = workspace
@@ -72,12 +79,12 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ownerValue.Value = owner
 	ownerValue.Parent = metadata
 	
-	-- Create floor
+	-- Create floor at elevated Y position to avoid village collision
 	local floor = Instance.new("Part")
 	floor.Name = "Floor"
 	floor.Shape = Enum.PartType.Block
 	floor.Size = Vector3.new(30, 1, 30)
-	floor.Position = Vector3.new(0, 0, 0)
+	floor.Position = Vector3.new(0, self.INTERIOR_Y_OFFSET, 0)
 	floor.Color = Color3.fromRGB(139, 90, 43)
 	floor.Material = Enum.Material.Wood
 	floor.CanCollide = true
@@ -94,10 +101,10 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	}
 	
 	local wallPositions = {
-		Vector3.new(0, 8, 15),      -- back
-		Vector3.new(0, 8, -15),     -- front
-		Vector3.new(15, 8, 0),      -- right
-		Vector3.new(-15, 8, 0)      -- left
+		Vector3.new(0, self.INTERIOR_Y_OFFSET + 8, 15),      -- back
+		Vector3.new(0, self.INTERIOR_Y_OFFSET + 8, -15),     -- front
+		Vector3.new(15, self.INTERIOR_Y_OFFSET + 8, 0),      -- right
+		Vector3.new(-15, self.INTERIOR_Y_OFFSET + 8, 0)      -- left
 	}
 	
 	local wallSizes = {
@@ -119,11 +126,6 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 		wall.TopSurface = Enum.SurfaceType.Smooth
 		wall.BottomSurface = Enum.SurfaceType.Smooth
 		wall.Parent = interior
-		
-		-- Add collision to walls
-		local collision = Instance.new("BodyVelocity")
-		collision.MaxForce = Vector3.new(0, 0, 0)
-		collision.Parent = wall
 	end
 	
 	-- Create ceiling
@@ -131,7 +133,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ceiling.Name = "Ceiling"
 	ceiling.Shape = Enum.PartType.Block
 	ceiling.Size = Vector3.new(30, 1, 30)
-	ceiling.Position = Vector3.new(0, 16, 0)
+	ceiling.Position = Vector3.new(0, self.INTERIOR_Y_OFFSET + 16, 0)
 	ceiling.Color = Color3.fromRGB(220, 220, 220)
 	ceiling.Material = Enum.Material.Brick
 	ceiling.CanCollide = true
@@ -139,17 +141,32 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	ceiling.BottomSurface = Enum.SurfaceType.Smooth
 	ceiling.Parent = interior
 	
-	-- Create exit portal (door inside house)
+	-- Create EXIT PORTAL (blue door inside house)
 	local exitPortal = Instance.new("Part")
 	exitPortal.Name = "ExitPortal"
 	exitPortal.Shape = Enum.PartType.Block
 	exitPortal.Size = Vector3.new(3, 4, 0.5)
-	exitPortal.Position = Vector3.new(0, 2, -14.5)
+	exitPortal.Position = Vector3.new(0, self.INTERIOR_Y_OFFSET + 2, -14.5)
 	exitPortal.Color = Color3.fromRGB(100, 200, 255)
 	exitPortal.Material = Enum.Material.Neon
 	exitPortal.CanCollide = false
-	exitPortal.CFrame = CFrame.new(0, 2, -14.5)
+	exitPortal.Transparency = 0.2
 	exitPortal.Parent = interior
+	
+	-- Add label to exit portal
+	local portalLabel = Instance.new("BillboardGui")
+	portalLabel.Size = UDim2.new(4, 0, 2, 0)
+	portalLabel.MaxDistance = 100
+	portalLabel.Parent = exitPortal
+	
+	local labelText = Instance.new("TextLabel")
+	labelText.Size = UDim2.new(1, 0, 1, 0)
+	labelText.BackgroundTransparency = 0.5
+	labelText.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+	labelText.TextScaled = true
+	labelText.Text = "🚪 Exit"
+	labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
+	labelText.Parent = portalLabel
 	
 	local touchConnection
 	touchConnection = exitPortal.Touched:Connect(function(hit)
@@ -158,7 +175,7 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 			local player = Players:FindFirstChild(character.Name) or game.Players:FindFirstChild(character.Name)
 			
 			if player then
-				exitHouseEvent:FireClient(player)
+				self:ExitHouse(player)
 			end
 		end
 	end)
@@ -172,11 +189,11 @@ function HouseInteriorManager:CreateInterior(houseName, owner)
 	self.interiors[houseName] = {
 		folder = interior,
 		owner = owner,
-		spawnPoint = Vector3.new(0, 2, 0),
+		spawnPoint = Vector3.new(0, self.INTERIOR_Y_OFFSET + 2, 0),
 		furniture = {}
 	}
 	
-	print("✅ Created interior for " .. houseName .. " owned by " .. owner)
+	print("✅ Created interior for " .. houseName .. " (Y=" .. self.INTERIOR_Y_OFFSET .. ")")
 	return interior
 end
 
@@ -205,6 +222,21 @@ function HouseInteriorManager:AddDoorToHouse(house, houseName)
 	clickDetector.MaxActivationDistance = 30
 	clickDetector.Parent = door
 	
+	-- Add label to door
+	local doorLabel = Instance.new("BillboardGui")
+	doorLabel.Size = UDim2.new(3, 0, 1.5, 0)
+	doorLabel.MaxDistance = 50
+	doorLabel.Parent = door
+	
+	local labelText = Instance.new("TextLabel")
+	labelText.Size = UDim2.new(1, 0, 1, 0)
+	labelText.BackgroundTransparency = 0.3
+	labelText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	labelText.TextScaled = true
+	labelText.Text = "🚪 Enter Home"
+	labelText.TextColor3 = Color3.fromRGB(0, 0, 0)
+	labelText.Parent = doorLabel
+	
 	-- Handle door touch (teleport into house)
 	local touchConnection
 	touchConnection = door.Touched:Connect(function(hit)
@@ -231,8 +263,23 @@ function HouseInteriorManager:AddDoorToHouse(house, houseName)
 	print("✅ Added white door to " .. houseName)
 end
 
--- Teleport player into house
+-- Teleport player into house (creates interior on first entry)
 function HouseInteriorManager:EnterHouse(player, houseName)
+	-- Create interior if it doesn't exist yet (lazy loading)
+	if not self.interiors[houseName] then
+		local house = workspace.Village:FindFirstChild(houseName)
+		if not house then
+			warn("House not found: " .. houseName)
+			return false
+		end
+		
+		local ownerValue = house:FindFirstChild("Owner")
+		local owner = ownerValue and ownerValue.Value or "Admin"
+		
+		-- Create interior now
+		self:CreateInterior(houseName, owner)
+	end
+	
 	local houseData = self.interiors[houseName]
 	if not houseData then
 		warn("House interior not found: " .. houseName)
@@ -245,7 +292,7 @@ function HouseInteriorManager:EnterHouse(player, houseName)
 	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 	if not humanoidRootPart then return false end
 	
-	-- Store player's previous position
+	-- Store player's previous position (for exit)
 	if not player:GetAttribute("PreviousPosition") then
 		player:SetAttribute("PreviousPosition", humanoidRootPart.CFrame)
 	end
@@ -257,7 +304,7 @@ function HouseInteriorManager:EnterHouse(player, houseName)
 	self.playerHouses[player.UserId] = houseName
 	player:SetAttribute("CurrentHouse", houseName)
 	
-	print("✅ " .. player.Name .. " entered " .. houseName)
+	print("✅ " .. player.Name .. " entered " .. houseName .. " (Y=" .. self.INTERIOR_Y_OFFSET .. ")")
 	return true
 end
 
@@ -274,7 +321,7 @@ function HouseInteriorManager:ExitHouse(player)
 	if houseName then
 		local doorPos = self.houseDoors[houseName]
 		if doorPos then
-			humanoidRootPart.CFrame = CFrame.new(doorPos + Vector3.new(0, 0, -3))
+			humanoidRootPart.CFrame = CFrame.new(doorPos + Vector3.new(0, 0, 2))  -- Outside door
 		else
 			local houseInVillage = workspace.Village:FindFirstChild(houseName)
 			if houseInVillage then
@@ -372,9 +419,9 @@ placeFurnitureEvent.OnServerEvent:Connect(function(player, furnitureId, position
 end)
 
 -- ============================================
--- INITIALIZE EXISTING HOUSES
+-- INITIALIZE HOUSE DOORS (but NOT interiors)
 -- ============================================
-local function initializeExistingHouses()
+local function initializeHouseDoors()
 	wait(2) -- Wait for village to load
 	
 	local villageFolder = workspace:FindFirstChild("Village")
@@ -383,23 +430,18 @@ local function initializeExistingHouses()
 		return
 	end
 	
+	-- Only add doors, DON'T create interiors yet
 	for _, house in pairs(villageFolder:GetChildren()) do
 		if house.Name:match("^House_") then
-			local ownerValue = house:FindFirstChild("Owner")
-			local owner = ownerValue and ownerValue.Value or "Admin"
-			
-			-- Create interior for each house
-			HouseInteriorManager:CreateInterior(house.Name, owner)
-			
 			-- Add white door to house
 			HouseInteriorManager:AddDoorToHouse(house, house.Name)
 		end
 	end
 	
-	print("✅ House Interior System Ready!")
+	print("✅ House Door System Ready! (Interiors lazy-loaded on entry)")
 end
 
-initializeExistingHouses()
+initializeHouseDoors()
 
 -- Handle new players entering
 local function onPlayerAdded(player)
@@ -418,4 +460,4 @@ Players.PlayerRemoving:Connect(function(player)
 	HouseInteriorManager.playerHouses[player.UserId] = nil
 end)
 
-print("🎉 House Interior System Initialized!")
+print("🎉 House Interior System Initialized! (Lazy-loaded, Y=" .. HouseInteriorManager.INTERIOR_Y_OFFSET .. ")")
