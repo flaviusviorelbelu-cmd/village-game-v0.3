@@ -34,6 +34,10 @@ local showMessageEvent = Instance.new("RemoteEvent")
 showMessageEvent.Name = "ShowMessage"
 showMessageEvent.Parent = remoteEventsFolder
 
+local showShopEvent = Instance.new("RemoteEvent")
+showShopEvent.Name = "ShowShop"
+showShopEvent.Parent = remoteEventsFolder
+
 local updateCurrencyEvent = Instance.new("RemoteEvent")
 updateCurrencyEvent.Name = "UpdateCurrency"
 updateCurrencyEvent.Parent = remoteEventsFolder
@@ -123,23 +127,23 @@ function NPCManager:CreateNPC(npcConfig)
 	local npcName = npcConfig.name or (npcConfig.customName or "Unknown")
 	local position = npcConfig.position or Vector3.new(0, 3, 0)
 	
-	-- Create NPC model (simple humanoid)
+	-- Create NPC model
 	local npc = Instance.new("Model")
 	npc.Name = npcName
-	npc.PrimaryPart = nil -- Will be set to humanoidRootPart
 	npc.Parent = workspace
 	
-	-- Create humanoid root part
+	-- Create humanoid root part (STATIC, NO ROLLING)
 	local humanoidRootPart = Instance.new("Part")
 	humanoidRootPart.Name = "HumanoidRootPart"
-	humanoidRootPart.Shape = Enum.PartType.Ball
-	humanoidRootPart.Size = Vector3.new(2, 2, 1)
+	humanoidRootPart.Shape = Enum.PartType.Block  -- Use block for stable positioning
+	humanoidRootPart.Size = Vector3.new(2, 3, 2)
 	humanoidRootPart.Position = position
 	humanoidRootPart.CanCollide = true
-	humanoidRootPart.Transparency = 0
+	humanoidRootPart.Transparency = 0.3  -- Slightly transparent
 	humanoidRootPart.Color = typeData.color
 	humanoidRootPart.TopSurface = Enum.SurfaceType.Smooth
 	humanoidRootPart.BottomSurface = Enum.SurfaceType.Smooth
+	humanoidRootPart.CustomPhysicalProperties = PhysicalProperties.new(1, 0, 0, 1, 1)  -- No friction, no elasticity
 	humanoidRootPart.Parent = npc
 	
 	-- Create humanoid
@@ -151,11 +155,29 @@ function NPCManager:CreateNPC(npcConfig)
 	-- Set primary part
 	npc.PrimaryPart = humanoidRootPart
 	
+	-- Create visible head part
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Shape = Enum.PartType.Ball
+	head.Size = Vector3.new(1.5, 1.5, 1.5)
+	head.Position = position + Vector3.new(0, 1.5, 0)
+	head.CanCollide = false
+	head.Color = typeData.color
+	head.TopSurface = Enum.SurfaceType.Smooth
+	head.BottomSurface = Enum.SurfaceType.Smooth
+	head.Parent = npc
+	
+	-- Weld head to body
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = humanoidRootPart
+	weld.Part1 = head
+	weld.Parent = head
+	
 	-- Add nameplate above NPC
 	local nameplate = Instance.new("BillboardGui")
 	nameplate.Size = UDim2.new(6, 0, 2, 0)
 	nameplate.MaxDistance = 100
-	nameplate.Parent = humanoidRootPart
+	nameplate.Parent = head
 	
 	local nameText = Instance.new("TextLabel")
 	nameText.Size = UDim2.new(1, 0, 0.5, 0)
@@ -181,8 +203,8 @@ function NPCManager:CreateNPC(npcConfig)
 	local promptGui = Instance.new("BillboardGui")
 	prompGui.Size = UDim2.new(4, 0, 1.5, 0)
 	prompGui.MaxDistance = 50
-	prompGui.Position = UDim2.new(0, 0, -1.5, 0)
-	prompGui.Parent = humanoidRootPart
+	prompGui.Position = UDim2.new(0, 0, -2, 0)
+	prompGui.Parent = head
 	
 	local promptText = Instance.new("TextLabel")
 	prompText.Size = UDim2.new(1, 0, 1, 0)
@@ -204,17 +226,18 @@ function NPCManager:CreateNPC(npcConfig)
 		quests = npcConfig.quests or {},
 		dialogue = DIALOGUES[npcType] or DIALOGUES.MERCHANT,
 		tradeValue = npcConfig.tradeValue or 1.0,
-		humanoid = humanoid
+		humanoid = humanoid,
+		humanoidRootPart = humanoidRootPart
 	}
 	
-	-- Make NPC clickable for interaction
-	humanoidRootPart.Touched:Connect(function(hit)
-		if hit.Parent and hit.Parent:FindFirstChild("Humanoid") then
-			local player = Players:FindFirstChild(hit.Parent.Name)
-			if player then
-				-- Handled by client interaction
-			end
-		end
+	-- Make NPC clickable for interaction (via ClickDetector)
+	local clickDetector = Instance.new("ClickDetector")
+	clickDetector.MaxActivationDistance = 50
+	clickDetector.Parent = head
+	
+	clickDetector.MouseClick:Connect(function(player)
+		print("🧑 " .. player.Name .. " clicked on " .. npcName)
+		interactNPCEvent:FireClient(player, npcName, typeData.name)
 	end)
 	
 	print("🧑 Created NPC: " .. npcName .. " at " .. tostring(position))
@@ -305,7 +328,6 @@ end
 
 interactNPCEvent.OnServerEvent:Connect(function(player, npcName)
 	print("🧑 " .. player.Name .. " is interacting with " .. npcName)
-	-- Trigger dialogue and UI on client
 end)
 
 getDialogueEvent.OnServerEvent:Connect(function(player, npcName, dialogueType)
@@ -316,7 +338,6 @@ end)
 tradeWithNPCEvent.OnServerEvent:Connect(function(player, npcName, itemGiven, quantity)
 	local success, value = NPCManager:TradeWithNPC(player, npcName, itemGiven, quantity)
 	if success then
-		-- Add currency to player (handled by economy system)
 		tradeWithNPCEvent:FireClient(player, success, value)
 	end
 end)
@@ -327,6 +348,10 @@ end)
 
 showMessageEvent.OnServerEvent:Connect(function(player, message, messageType)
 	print("💬 " .. player.Name .. ": " .. message)
+end)
+
+showShopEvent.OnServerEvent:Connect(function(player, shopName)
+	print("📕 " .. player.Name .. " opened shop: " .. shopName)
 end)
 
 initializeVillageNPCs()
