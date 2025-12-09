@@ -38,6 +38,10 @@ local showShopEvent = Instance.new("RemoteEvent")
 showShopEvent.Name = "ShowShop"
 showShopEvent.Parent = remoteEventsFolder
 
+local buyItemEvent = Instance.new("RemoteEvent")
+buyItemEvent.Name = "BuyItem"
+buyItemEvent.Parent = remoteEventsFolder
+
 local updateCurrencyEvent = Instance.new("RemoteEvent")
 updateCurrencyEvent.Name = "UpdateCurrency"
 updateCurrencyEvent.Parent = remoteEventsFolder
@@ -352,6 +356,10 @@ end)
 
 showShopEvent.OnServerEvent:Connect(function(player, shopName)
 	print("📕 " .. player.Name .. " opened shop: " .. shopName)
+end)
+
+buyItemEvent.OnServerEvent:Connect(function(player, itemName, price)
+	print("📕 " .. player.Name .. " is buying: " .. itemName .. " for " .. tostring(price))
 end)
 
 initializeVillageNPCs()
