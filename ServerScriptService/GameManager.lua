@@ -408,13 +408,12 @@ local function initializeHouseSystem()
 		updateHouseSign(houseName, ownerName)
 	end
 
-	-- Get RemoteEvents from EconomySystem (they MUST exist by now)
 	local showHousePurchaseEvent = remoteEventsFolder:FindFirstChild("ShowHousePurchase")
 	local updateCurrencyEvent = remoteEventsFolder:FindFirstChild("UpdateCurrency")
 	local showMessageEvent = remoteEventsFolder:FindFirstChild("ShowMessage")
 	
 	if not showHousePurchaseEvent or not updateCurrencyEvent or not showMessageEvent then
-		warn("❌ Required RemoteEvents not found! Game cannot continue.")
+		warn("❌ Required RemoteEvents not found!")
 		return
 	end
 
@@ -484,7 +483,9 @@ local function initializeShops()
 				shopCount = shopCount + 1
 				shop.ClickDetector.MouseClick:Connect(function(player)
 					print("🛒 Player " .. player.Name .. " clicked " .. shop.Name)
-					shopInteractionEvent:FireServer(shop.Name)
+					-- Fire event from CLIENT side - NOT server
+					-- The event listener is on server, so we don't fire from here
+					-- Instead, let the client handle it
 				end)
 				print("✅ Added click handler for " .. shop.Name)
 			end
@@ -521,7 +522,8 @@ local function setupPlayer(player)
 	wait(1)
 	local updateCurrencyEvent = remoteEventsFolder:FindFirstChild("UpdateCurrency")
 	if updateCurrencyEvent then
-		updateCurrencyEvent:FireClient(player, 3000)
+		-- Fire to CLIENT, not server!
+		updateCurrencyEvent:FireClient(player, {gold = 100, silver = 10, gems = 0})
 	end
 	print("✅ Player " .. player.Name .. " setup complete")
 end
