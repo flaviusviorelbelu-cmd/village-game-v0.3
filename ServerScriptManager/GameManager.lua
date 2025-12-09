@@ -3,20 +3,20 @@ print("🏘️ Starting Village Game with Houses & Signs...")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 local houseDataStore = DataStoreService:GetDataStore("HouseOwnership_v1")
--- Create RemoteEvents
-local remoteEventsFolder = Instance.new("Folder")
-remoteEventsFolder.Name = "RemoteEvents"
-remoteEventsFolder.Parent = ReplicatedStorage
-local remoteEvents = {"BuyItem", "SellItem", "ShowShop", "UpdateCurrency", "ShowMessage", "UpdatePlayerData", "BuyHouse", "ShowHousePurchase"}
-for _, eventName in ipairs(remoteEvents) do
-	local remoteEvent = Instance.new("RemoteEvent")
-	remoteEvent.Name = eventName
-	remoteEvent.Parent = remoteEventsFolder
+
+-- NOTE: RemoteEvents are now created by EconomySystem.lua
+-- We just reference them here
+local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
+if not remoteEventsFolder then
+	print("⚠️ RemoteEvents not found. Make sure EconomySystem.lua runs first!")
 end
 print("✅ Created RemoteEvents")
+
 wait(1)
+
 -- House ownership data
 local houseOwners = {}
+
 -- ============================================
 -- VILLAGE BUILDER WITH HOUSES & SHOP SIGNS
 -- ============================================
@@ -204,10 +204,10 @@ local function buildVillage()
 
 	-- Create 4 Shops WITH SIGNS
 	local shops = {
-		{name = "General Store", color = "Bright blue", angle = 0, textColor = Color3.fromRGB(100, 150, 255)},
-		{name = "Weapon Shop", color = "Bright red", angle = math.pi/2, textColor = Color3.fromRGB(255, 100, 100)},
-		{name = "Food Store", color = "Bright green", angle = math.pi, textColor = Color3.fromRGB(100, 255, 100)},
-		{name = "Clothing Shop", color = "Bright violet", angle = 3*math.pi/2, textColor = Color3.fromRGB(200, 100, 255)}
+		{name = "GeneralStore", color = "Bright blue", angle = 0, textColor = Color3.fromRGB(100, 150, 255)},
+		{name = "WeaponShop", color = "Bright red", angle = math.pi/2, textColor = Color3.fromRGB(255, 100, 100)},
+		{name = "FoodStore", color = "Bright green", angle = math.pi, textColor = Color3.fromRGB(100, 255, 100)},
+		{name = "ClothingShop", color = "Bright violet", angle = 3*math.pi/2, textColor = Color3.fromRGB(200, 100, 255)}
 	}
 
 	for _, shopData in ipairs(shops) do
@@ -329,8 +329,8 @@ local function buildVillage()
 	spawn.Parent = villageFolder
 
 	print("✅ Village Created!")
-
 end
+
 -- ============================================
 -- HOUSE OWNERSHIP SYSTEM
 -- ============================================
@@ -344,13 +344,14 @@ local function loadHouseOwnership()
 	else
 		print("💾 No existing house data")
 	end
-
 end
+
 local function saveHouseOwnership()
 	pcall(function()
 		houseDataStore:SetAsync("AllHouses", houseOwners)
 	end)
 end
+
 local function updateHouseSign(houseName, ownerName)
 	local house = workspace.Village:FindFirstChild(houseName)
 	if house then
@@ -391,6 +392,7 @@ local function updateHouseSign(houseName, ownerName)
 		end
 	end
 end
+
 local function initializeHouseSystem()
 	print("🏠 Initializing House System...")
 	loadHouseOwnership()
@@ -435,8 +437,10 @@ local function initializeHouseSystem()
 				local price = house:FindFirstChild("Price")
 				if price then
 					local owner = houseOwners[house.Name]
-					print("🖱️ Player " .. player.Name .. " clicked " .. house.Name .. " (Price: " .. price.Value .. ")")
-					showHousePurchaseEvent:FireClient(player, house.Name, price.Value, owner)
+					print("🖱️ Player " .. player.Name .. " clicked " .. house.Name .. " (Price: " .. price.Value .. ") (x" .. (houseCount or 1) .. ")")
+					if showHousePurchaseEvent then
+						showHousePurchaseEvent:FireClient(player, house.Name, price.Value, owner)
+					end
 				end
 			end)
 			print("✅ Added click handler for " .. house.Name)
@@ -462,20 +466,20 @@ local function initializeHouseSystem()
 		-- Check if already owned
 		if houseOwners[houseName] then
 			print("❌ House already owned by " .. houseOwners[houseName])
-			showMessageEvent:FireClient(player, "❌ This house is already owned!", "error")
+			showMessageEvent:FireClient(player, "❌ This house is already owned!")
 			return
 		end
 
 		local leaderstats = player:FindFirstChild("leaderstats")
 		if not leaderstats then 
 			print("❌ No leaderstats for " .. player.Name)
-			showMessageEvent:FireClient(player, "❌ Player data not ready. Please wait a moment!", "error")
+			showMessageEvent:FireClient(player, "❌ Player data not ready. Please wait a moment!")
 			return 
 		end
 		local coins = leaderstats:FindFirstChild("Coins")
 		if not coins then 
 			print("❌ No coins for " .. player.Name)
-			showMessageEvent:FireClient(player, "❌ Coin data not ready. Please wait a moment!", "error")
+			showMessageEvent:FireClient(player, "❌ Coin data not ready. Please wait a moment!")
 			return 
 		end
 
@@ -487,92 +491,62 @@ local function initializeHouseSystem()
 			saveHouseOwnership()
 
 			updateCurrencyEvent:FireClient(player, coins.Value)
-			showMessageEvent:FireClient(player, "✅ Purchased " .. houseName .. "!", "success")
+			showMessageEvent:FireClient(player, "✅ Purchased " .. houseName .. "!")
 			print("✅ " .. player.Name .. " successfully purchased " .. houseName)
 		else
 			print("❌ " .. player.Name .. " has insufficient funds (" .. coins.Value .. "/" .. price.Value .. ")")
-			showMessageEvent:FireClient(player, "❌ Not enough coins! Need " .. price.Value, "error")
+			showMessageEvent:FireClient(player, "❌ Not enough coins! Need " .. price.Value)
 		end
 	end)
 
 	print("✅ House System Ready!")
-
 end
--- ============================================
--- TRADING SYSTEM
--- ============================================
-local shopInventories = {
-	["General Store"] = {
-		{name = "Health Potion", price = 50},
-		{name = "Rope", price = 20},
-		{name = "Torch", price = 15},
-		{name = "Backpack", price = 100}
-	},
-	["Weapon Shop"] = {
-		{name = "Wooden Sword", price = 150},
-		{name = "Iron Sword", price = 300},
-		{name = "Bow", price = 200},
-		{name = "Shield", price = 250}
-	},
-	["Food Store"] = {
-		{name = "Bread", price = 10},
-		{name = "Apple", price = 5},
-		{name = "Cooked Meat", price = 25},
-		{name = "Water", price = 3}
-	},
-	["Clothing Shop"] = {
-		{name = "Leather Armor", price = 200},
-		{name = "Iron Helmet", price = 150},
-		{name = "Boots", price = 75},
-		{name = "Cloak", price = 100}
-	}
-}
-local function initializeTradingSystem()
-	print("🛒 Initializing Trading...")
-	local buyEvent = remoteEventsFolder:WaitForChild("BuyItem")
-	local showShopEvent = remoteEventsFolder:WaitForChild("ShowShop")
-	local updateCurrencyEvent = remoteEventsFolder:WaitForChild("UpdateCurrency")
-	local showMessageEvent = remoteEventsFolder:WaitForChild("ShowMessage")
 
-	for _, shop in pairs(workspace.Village:GetChildren()) do
-		if shop:IsA("Part") and shop:FindFirstChild("ClickDetector") and shopInventories[shop.Name] then
-			shop.ClickDetector.MouseClick:Connect(function(player)
-				showShopEvent:FireClient(player, shop.Name, shopInventories[shop.Name])
-			end)
+-- ============================================
+-- SHOP SYSTEM - Now delegated to EconomySystem
+-- ============================================
+local function initializeShops()
+	print("🛒 Initializing Shops...")
+	local villageFolder = workspace:WaitForChild("Village", 10)
+	if not villageFolder then
+		warn("❌ Village folder not found! Cannot initialize shops.")
+		return
+	end
+	
+	-- Get shop events from EconomySystem
+	local shopInteractionEvent = remoteEventsFolder:WaitForChild("ShopInteraction")
+	
+	-- Find all shops and add click handlers
+	local shopNames = {"GeneralStore", "WeaponShop", "FoodStore", "ClothingShop"}
+	local shopCount = 0
+	
+	for _, shop in pairs(villageFolder:GetChildren()) do
+		if shop:IsA("Part") and shop:FindFirstChild("ClickDetector") then
+			-- Check if this is a shop (by name)
+			local isShop = false
+			for _, shopName in ipairs(shopNames) do
+				if shop.Name == shopName then
+					isShop = true
+					break
+				end
+			end
+			
+			if isShop then
+				shopCount = shopCount + 1
+				-- Add click handler that fires ShopInteraction event
+				shop.ClickDetector.MouseClick:Connect(function(player)
+					print("🛒 Player " .. player.Name .. " clicked " .. shop.Name)
+					-- Fire ShopInteraction event - EconomySystem will handle the rest
+					shopInteractionEvent:FireServer(shop.Name)
+				end)
+				print("✅ Added click handler for " .. shop.Name)
+			end
 		end
 	end
-
-	buyEvent.OnServerEvent:Connect(function(player, shopName, itemName, price)
-		local leaderstats = player:FindFirstChild("leaderstats")
-		if not leaderstats then return end
-		local coins = leaderstats:FindFirstChild("Coins")
-		if not coins then return end
-
-		if coins.Value >= price then
-			coins.Value = coins.Value - price
-
-			local inventory = player:FindFirstChild("Inventory")
-			if not inventory then
-				inventory = Instance.new("Folder")
-				inventory.Name = "Inventory"
-				inventory.Parent = player
-			end
-
-			local item = Instance.new("StringValue")
-			item.Name = itemName
-			item.Value = shopName
-			item.Parent = inventory
-
-			updateCurrencyEvent:FireClient(player, coins.Value)
-			showMessageEvent:FireClient(player, "✅ Purchased " .. itemName .. "!", "success")
-		else
-			showMessageEvent:FireClient(player, "❌ Not enough coins!", "error")
-		end
-	end)
-
-	print("✅ Trading Ready!")
-
+	
+	print("✅ Shop system initialized (" .. shopCount .. " shops ready)")
 end
+
 -- ============================================
 -- PLAYER MANAGEMENT
 -- ============================================
@@ -599,10 +573,12 @@ local function setupPlayer(player)
 	level.Parent = leaderstats
 
 	wait(1)
-	remoteEventsFolder.UpdateCurrency:FireClient(player, 3000)
+	if remoteEventsFolder and remoteEventsFolder:FindFirstChild("UpdateCurrency") then
+		remoteEventsFolder.UpdateCurrency:FireClient(player, 3000)
+	end
 	print("✅ Player " .. player.Name .. " setup complete")
-
 end
+
 -- ============================================
 -- INITIALIZE
 -- ============================================
@@ -610,7 +586,7 @@ print("🚀 Starting initialization sequence...")
 buildVillage()
 print("✅ Village built, now initializing systems...")
 initializeHouseSystem()
-initializeTradingSystem()
+initializeShops() -- Changed from initializeTradingSystem
 
 -- Setup existing players (for Studio testing)
 print("🔍 Setting up existing players...")
@@ -622,8 +598,9 @@ print("✅ Existing players setup complete")
 -- Setup new players
 game.Players.PlayerAdded:Connect(setupPlayer)
 
-print("✅ Game Ready with Houses & Shop Signs!")
+print("✅ Game Ready with Houses & Shops!")
 print("📊 Debug: Village has " .. #workspace.Village:GetChildren() .. " objects")
+
 -- Auto-save house ownership every 5 minutes
 spawn(function()
 	while true do
