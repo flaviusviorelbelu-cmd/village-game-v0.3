@@ -46,6 +46,10 @@ local updateCurrencyEvent = Instance.new("RemoteEvent")
 updateCurrencyEvent.Name = "UpdateCurrency"
 updateCurrencyEvent.Parent = remoteEventsFolder
 
+local showHousePurchaseEvent = Instance.new("RemoteEvent")
+showHousePurchaseEvent.Name = "ShowHousePurchase"
+showHousePurchaseEvent.Parent = remoteEventsFolder
+
 print("✅ Created NPC RemoteEvents")
 
 -- ============================================
@@ -181,6 +185,7 @@ function NPCManager:CreateNPC(npcConfig)
 	local nameplate = Instance.new("BillboardGui")
 	nameplate.Size = UDim2.new(6, 0, 2, 0)
 	nameplate.MaxDistance = 100
+	nameplate.StudsOffset = Vector3.new(0, 2.5, 0)
 	nameplate.Parent = head
 	
 	local nameText = Instance.new("TextLabel")
@@ -207,7 +212,7 @@ function NPCManager:CreateNPC(npcConfig)
 	local promptGui = Instance.new("BillboardGui")
 	promptGui.Size = UDim2.new(4, 0, 1.5, 0)
 	promptGui.MaxDistance = 50
-	promptGui.Position = UDim2.new(0, 0, -2, 0)
+	promptGui.StudsOffset = Vector3.new(0, -2, 0)
 	promptGui.Parent = head
 	
 	local promptText = Instance.new("TextLabel")
@@ -360,6 +365,10 @@ end)
 
 buyItemEvent.OnServerEvent:Connect(function(player, itemName, price)
 	print("📕 " .. player.Name .. " is buying: " .. itemName .. " for " .. tostring(price))
+end)
+
+showHousePurchaseEvent.OnServerEvent:Connect(function(player, houseId, price)
+	print("🏠 " .. player.Name .. " is purchasing house " .. houseId .. " for " .. tostring(price))
 end)
 
 initializeVillageNPCs()
