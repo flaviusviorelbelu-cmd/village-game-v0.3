@@ -149,9 +149,20 @@ print("✅ Wallet UI Created")
 local function updateWalletDisplay(balance)
 	if not balance then return end
 	
-	goldLabel.Text = "🟡 Gold: " .. tostring(balance.gold or 0)
-	silverLabel.Text = "🔘 Silver: " .. tostring(balance.silver or 0)
-	gemsLabel.Text = "💎 Gems: " .. tostring(balance.gems or 0)
+	-- Handle both table and number formats
+	if type(balance) == "table" then
+		-- EconomySystem format: {gold, silver, gems}
+		goldLabel.Text = "🟡 Gold: " .. tostring(balance.gold or 0)
+		silverLabel.Text = "🔘 Silver: " .. tostring(balance.silver or 0)
+		gemsLabel.Text = "💎 Gems: " .. tostring(balance.gems or 0)
+	elseif type(balance) == "number" then
+		-- Legacy format: just a number (show as gold only)
+		goldLabel.Text = "🟡 Gold: " .. tostring(balance)
+		silverLabel.Text = "🔘 Silver: 0"
+		gemsLabel.Text = "💎 Gems: 0"
+	else
+		print("⚠️ Unknown balance format: " .. type(balance))
+	end
 end
 
 local function showNPCDialogue(npcName, dialogue)
