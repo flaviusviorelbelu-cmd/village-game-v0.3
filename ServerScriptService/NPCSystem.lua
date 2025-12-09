@@ -216,14 +216,14 @@ function NPCManager:CreateNPC(npcConfig)
 	promptGui.Parent = head
 	
 	local promptText = Instance.new("TextLabel")
-	prompText.Size = UDim2.new(1, 0, 1, 0)
-	prompText.BackgroundTransparency = 0.5
-	prompText.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-	prompText.TextScaled = true
-	prompText.Text = "[E] Interact"
-	prompText.TextColor3 = Color3.fromRGB(100, 255, 100)
-	prompText.Font = Enum.Font.GothamBold
-	prompText.Parent = promptGui
+	promptText.Size = UDim2.new(1, 0, 1, 0)
+	promptText.BackgroundTransparency = 0.5
+	promptText.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	promptText.TextScaled = true
+	promptText.Text = "[E] Interact"
+	promptText.TextColor3 = Color3.fromRGB(100, 255, 100)
+	promptText.Font = Enum.Font.GothamBold
+	promptText.Parent = promptGui
 	
 	-- Store NPC data
 	self.npcs[npcName] = npc
