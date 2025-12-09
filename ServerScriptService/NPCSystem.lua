@@ -205,10 +205,10 @@ function NPCManager:CreateNPC(npcConfig)
 	
 	-- Add interaction prompt
 	local promptGui = Instance.new("BillboardGui")
-	prompGui.Size = UDim2.new(4, 0, 1.5, 0)
-	prompGui.MaxDistance = 50
-	prompGui.Position = UDim2.new(0, 0, -2, 0)
-	prompGui.Parent = head
+	promptGui.Size = UDim2.new(4, 0, 1.5, 0)
+	promptGui.MaxDistance = 50
+	promptGui.Position = UDim2.new(0, 0, -2, 0)
+	promptGui.Parent = head
 	
 	local promptText = Instance.new("TextLabel")
 	prompText.Size = UDim2.new(1, 0, 1, 0)
