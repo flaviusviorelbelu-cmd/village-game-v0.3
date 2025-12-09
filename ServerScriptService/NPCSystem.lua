@@ -39,31 +39,31 @@ local NPC_TYPES = {
 	MERCHANT = {
 		name = "Merchant",
 		color = Color3.fromRGB(200, 150, 50),
-		emoji = "🏪",
+		emoji = "MERCHANT",
 		roleSuffix = "the Merchant"
 	},
 	QUEST_GIVER = {
 		name = "Quest Giver",
 		color = Color3.fromRGB(100, 200, 100),
-		emoji = "📜",
+		emoji = "QUEST_GIVER",
 		roleSuffix = "the Quest Giver"
 	},
 	BLACKSMITH = {
 		name = "Blacksmith",
 		color = Color3.fromRGB(150, 100, 100),
-		emoji = "🔨",
+		emoji = "BLACKSMITH",
 		roleSuffix = "the Blacksmith"
 	},
 	HEALER = {
 		name = "Healer",
 		color = Color3.fromRGB(200, 100, 200),
-		emoji = "⚕️",
+		emoji = "HEALER",
 		roleSuffix = "the Healer"
 	},
 	BARTENDER = {
 		name = "Bartender",
 		color = Color3.fromRGB(100, 100, 200),
-		emoji = "🍺",
+		emoji = "BARTENDER",
 		roleSuffix = "the Bartender"
 	}
 }
@@ -73,7 +73,7 @@ local DIALOGUES = {
 	MERCHANT = {
 		greeting = "Welcome to my shop! Browse my wares or ask about my inventory.",
 		trade = "What can I help you find today?",
-		farwell = "Come back soon!"
+		farewell = "Come back soon!"
 	},
 	QUEST_GIVER = {
 		greeting = "Adventurer! I have important tasks for those brave enough to help.",
@@ -101,7 +101,13 @@ local DIALOGUES = {
 function NPCManager:CreateNPC(npcConfig)
 	local npcType = npcConfig.type or "MERCHANT"
 	local typeData = NPC_TYPES[npcType]
-	local npcName = npcConfig.name or (typeData.emoji .. " " .. npcConfig.customName)
+	
+	if not typeData then
+		warn("Invalid NPC type: " .. tostring(npcType))
+		return nil
+	end
+	
+	local npcName = npcConfig.name or (npcConfig.customName or "Unknown")
 	local position = npcConfig.position or Vector3.new(0, 3, 0)
 	
 	-- Create NPC model (simple humanoid)
@@ -183,9 +189,9 @@ function NPCManager:CreateNPC(npcConfig)
 		position = position,
 		inventory = npcConfig.inventory or {},
 		quests = npcConfig.quests or {},
-		dialogue = DIALOGUES[npcType],
+		dialogue = DIALOGUES[npcType] or DIALOGUES.MERCHANT,
 		tradeValue = npcConfig.tradeValue or 1.0,
-		humanbinary = humanoid
+		humanoid = humanoid
 	}
 	
 	-- Make NPC clickable for interaction
