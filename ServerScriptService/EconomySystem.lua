@@ -14,6 +14,7 @@ if not remoteEventsFolder then
 	remoteEventsFolder.Parent = ReplicatedStorage
 end
 
+-- CORE ECONOMY EVENTS
 local updateCurrencyEvent = Instance.new("RemoteEvent")
 updateCurrencyEvent.Name = "UpdateCurrency"
 updateCurrencyEvent.Parent = remoteEventsFolder
@@ -26,13 +27,39 @@ local transactionEvent = Instance.new("RemoteEvent")
 transactionEvent.Name = "ProcessTransaction"
 transactionEvent.Parent = remoteEventsFolder
 
-print("✅ Created Economy RemoteEvents")
+-- SHOP EVENTS (for TradingSystem integration)
+local shopInteractionEvent = Instance.new("RemoteEvent")
+shopInteractionEvent.Name = "ShopInteraction"
+shopInteractionEvent.Parent = remoteEventsFolder
+
+local purchaseItemEvent = Instance.new("RemoteEvent")
+purchaseItemEvent.Name = "PurchaseItem"
+purchaseItemEvent.Parent = remoteEventsFolder
+
+local sellItemEvent = Instance.new("RemoteEvent")
+sellItemEvent.Name = "SellItem"
+sellItemEvent.Parent = remoteEventsFolder
+
+local showShopEvent = Instance.new("RemoteEvent")
+showShopEvent.Name = "ShowShop"
+showShopEvent.Parent = remoteEventsFolder
+
+local updateInventoryEvent = Instance.new("RemoteEvent")
+updateInventoryEvent.Name = "UpdateInventory"
+updateInventoryEvent.Parent = remoteEventsFolder
+
+local showMessageEvent = Instance.new("RemoteEvent")
+showMessageEvent.Name = "ShowMessage"
+showMessageEvent.Parent = remoteEventsFolder
+
+print("✅ Created Economy & Shop RemoteEvents")
 
 -- ============================================
 -- ECONOMY MANAGER
 -- ============================================
 local EconomyManager = {}
 EconomyManager.playerWallets = {} -- Store player currencies
+EconomyManager.playerInventories = {} -- Store player inventories
 EconomyManager.transactionHistory = {} -- Track all transactions
 
 -- Currency types
@@ -66,6 +93,9 @@ function EconomyManager:InitializeWallet(player)
 		lastUpdated = os.time()
 	}
 	
+	-- Initialize player inventory
+	self.playerInventories[userId] = {}
+	
 	-- Initialize transaction history
 	self.transactionHistory[userId] = {}
 	
@@ -82,6 +112,15 @@ function EconomyManager:GetBalance(player)
 		self:InitializeWallet(player)
 	end
 	return self.playerWallets[userId]
+end
+
+-- Get player inventory
+function EconomyManager:GetInventory(player)
+	local userId = player.UserId
+	if not self.playerInventories[userId] then
+		self.playerInventories[userId] = {}
+	end
+	return self.playerInventories[userId]
 end
 
 -- Add currency to player
@@ -199,6 +238,31 @@ function EconomyManager:Transfer(fromPlayer, toPlayer, currencyType, amount, rea
 	end
 end
 
+-- Add item to inventory
+function EconomyManager:AddItemToInventory(player, itemName, itemData)
+	local userId = player.UserId
+	local inventory = self:GetInventory(player)
+	
+	-- Check if item already exists
+	for _, invItem in ipairs(inventory) do
+		if invItem.name == itemName then
+			invItem.quantity = (invItem.quantity or 1) + 1
+			updateInventoryEvent:FireClient(player, inventory)
+			return
+		end
+	end
+	
+	-- Add new item
+	table.insert(inventory, {
+		name = itemName,
+		description = itemData.description or "",
+		price = itemData.price or 0,
+		quantity = 1
+	})
+	
+	updateInventoryEvent:FireClient(player, inventory)
+end
+
 -- Get transaction history
 function EconomyManager:GetTransactionHistory(player, limit)
 	local userId = player.UserId
@@ -250,6 +314,164 @@ transactionEvent.OnServerEvent:Connect(function(player, action, ...)
 	end
 end)
 
+-- ============================================
+-- SHOP/TRADING EVENTS
+-- ============================================
+
+-- Define shop items
+local SHOP_ITEMS = {
+	GeneralStore = {
+		{name = "Wooden Pickaxe", price = 50, description = "Basic mining tool"},
+		{name = "Health Potion", price = 25, description = "Restores 50 HP"},
+		{name = "Rope", price = 15, description = "Useful for climbing"},
+		{name = "Lantern", price = 30, description = "Lights up dark areas"}
+	},
+	WeaponShop = {
+		{name = "Iron Sword", price = 150, description = "Sharp iron blade"},
+		{name = "Wooden Shield", price = 100, description = "Basic protection"},
+		{name = "Steel Dagger", price = 75, description = "Fast attack weapon"},
+		{name = "Bow", price = 120, description = "Ranged weapon"}
+	},
+	FoodStore = {
+		{name = "Bread", price = 10, description = "Restores hunger"},
+		{name = "Apple", price = 5, description = "Fresh fruit"},
+		{name = "Cooked Fish", price = 20, description = "Nutritious meal"},
+		{name = "Water Bottle", price = 8, description = "Quenches thirst"}
+	},
+	ClothingShop = {
+		{name = "Leather Boots", price = 60, description = "Comfortable footwear"},
+		{name = "Cotton Shirt", price = 40, description = "Basic clothing"},
+		{name = "Wool Cloak", price = 80, description = "Warm outerwear"},
+		{name = "Leather Gloves", price = 35, description = "Hand protection"}
+	}
+}
+
+-- Helper function to find item in shop
+local function findShopItem(shopName, itemName)
+	local shop = SHOP_ITEMS[shopName]
+	if not shop then return nil end
+	
+	for _, item in ipairs(shop) do
+		if item.name == itemName then
+			return item
+		end
+	end
+	return nil
+end
+
+-- Shop interaction event
+shopInteractionEvent.OnServerEvent:Connect(function(player, shopName)
+	local shopItems = SHOP_ITEMS[shopName]
+	if not shopItems then
+		print("❌ Shop not found: " .. shopName)
+		return
+	end
+	
+	-- Send shop data to client
+	showShopEvent:FireClient(player, shopName, shopItems)
+	print("🏪 Opened " .. shopName .. " for " .. player.Name)
+end)
+
+-- Purchase item event
+purchaseItemEvent.OnServerEvent:Connect(function(player, shopName, itemName)
+	local item = findShopItem(shopName, itemName)
+	if not item then
+		print("❌ Item not found: " .. itemName)
+		return
+	end
+	
+	-- Get player currency
+	local wallet = EconomyManager:GetBalance(player)
+	
+	-- Check if player has enough gold
+	if wallet.gold < item.price then
+		showMessageEvent:FireClient(player, "❌ Not enough coins! Need " .. item.price .. " gold. You have " .. wallet.gold)
+		return
+	end
+	
+	-- Process purchase
+	wallet.gold = wallet.gold - item.price
+	wallet.lastUpdated = os.time()
+	
+	-- Log transaction
+	local userId = player.UserId
+	table.insert(EconomyManager.transactionHistory[userId], {
+		type = "purchase",
+		shop = shopName,
+		item = itemName,
+		price = item.price,
+		timestamp = os.time()
+	})
+	
+	-- Add item to inventory
+	EconomyManager:AddItemToInventory(player, itemName, item)
+	
+	-- Notify player
+	showMessageEvent:FireClient(player, "✅ Purchased " .. itemName .. " for " .. item.price .. " gold!")
+	updateCurrencyEvent:FireClient(player, wallet)
+	
+	print("🛍️  " .. player.Name .. " purchased " .. itemName .. " for " .. item.price .. " gold")
+end)
+
+-- Sell item event
+sellItemEvent.OnServerEvent:Connect(function(player, itemName, quantity)
+	local inventory = EconomyManager:GetInventory(player)
+	quantity = quantity or 1
+	
+	-- Find item in inventory
+	local itemIndex = nil
+	local inventoryItem = nil
+	for i, invItem in ipairs(inventory) do
+		if invItem.name == itemName then
+			itemIndex = i
+			inventoryItem = invItem
+			break
+		end
+	end
+	
+	if not inventoryItem or inventoryItem.quantity < quantity then
+		showMessageEvent:FireClient(player, "❌ Not enough " .. itemName .. " to sell!")
+		return
+	end
+	
+	-- Calculate sell price (50% of buy price)
+	local sellPrice = math.floor(inventoryItem.price * 0.5) * quantity
+	
+	-- Process sale
+	inventoryItem.quantity = inventoryItem.quantity - quantity
+	if inventoryItem.quantity <= 0 then
+		table.remove(inventory, itemIndex)
+	end
+	
+	-- Add currency
+	local wallet = EconomyManager:GetBalance(player)
+	wallet.gold = wallet.gold + sellPrice
+	wallet.lastUpdated = os.time()
+	
+	-- Log transaction
+	local userId = player.UserId
+	table.insert(EconomyManager.transactionHistory[userId], {
+		type = "sell",
+		item = itemName,
+		quantity = quantity,
+		price = sellPrice,
+		timestamp = os.time()
+	})
+	
+	-- Update client
+	updateInventoryEvent:FireClient(player, inventory)
+	updateCurrencyEvent:FireClient(player, wallet)
+	
+	-- Notify player
+	showMessageEvent:FireClient(player, "✅ Sold " .. quantity .. "x " .. itemName .. " for " .. sellPrice .. " gold!")
+	
+	print("💰 " .. player.Name .. " sold " .. quantity .. "x " .. itemName .. " for " .. sellPrice .. " gold")
+end)
+
+-- ============================================
+-- PLAYER LIFECYCLE
+-- ============================================
+
 -- Initialize when players join
 local function onPlayerAdded(player)
 	wait(1)
@@ -258,6 +480,10 @@ local function onPlayerAdded(player)
 	-- Send initial balance
 	local balance = EconomyManager:GetBalance(player)
 	updateCurrencyEvent:FireClient(player, balance)
+	
+	-- Send initial inventory
+	local inventory = EconomyManager:GetInventory(player)
+	updateInventoryEvent:FireClient(player, inventory)
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)
@@ -266,6 +492,7 @@ Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(function(player)
 	local userId = player.UserId
 	EconomyManager.playerWallets[userId] = nil
+	EconomyManager.playerInventories[userId] = nil
 	EconomyManager.transactionHistory[userId] = nil
 end)
 
