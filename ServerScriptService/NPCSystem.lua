@@ -25,6 +25,19 @@ local tradeWithNPCEvent = Instance.new("RemoteEvent")
 tradeWithNPCEvent.Name = "TradeWithNPC"
 tradeWithNPCEvent.Parent = remoteEventsFolder
 
+-- Create missing RemoteEvents for client interactions
+local placeFurnitureEvent = Instance.new("RemoteEvent")
+placeFurnitureEvent.Name = "PlaceFurniture"
+placeFurnitureEvent.Parent = remoteEventsFolder
+
+local showMessageEvent = Instance.new("RemoteEvent")
+showMessageEvent.Name = "ShowMessage"
+showMessageEvent.Parent = remoteEventsFolder
+
+local updateCurrencyEvent = Instance.new("RemoteEvent")
+updateCurrencyEvent.Name = "UpdateCurrency"
+updateCurrencyEvent.Parent = remoteEventsFolder
+
 print("✅ Created NPC RemoteEvents")
 
 -- ============================================
@@ -306,6 +319,14 @@ tradeWithNPCEvent.OnServerEvent:Connect(function(player, npcName, itemGiven, qua
 		-- Add currency to player (handled by economy system)
 		tradeWithNPCEvent:FireClient(player, success, value)
 	end
+end)
+
+placeFurnitureEvent.OnServerEvent:Connect(function(player, furnitureType, position)
+	print("🛋️ " .. player.Name .. " placed " .. furnitureType .. " at " .. tostring(position))
+end)
+
+showMessageEvent.OnServerEvent:Connect(function(player, message, messageType)
+	print("💬 " .. player.Name .. ": " .. message)
 end)
 
 initializeVillageNPCs()
