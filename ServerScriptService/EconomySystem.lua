@@ -39,17 +39,17 @@ EconomyManager.transactionHistory = {} -- Track all transactions
 local CURRENCY_TYPES = {
 	GOLD = {
 		name = "Gold",
-		emoji = "🟼",
+		emoji = "GOLD_COIN",
 		description = "Main currency earned from trading and quests"
 	},
 	SILVER = {
 		name = "Silver",
-		emoji = "🚧",
+		emoji = "SILVER_COIN",
 		description = "Secondary currency for rare items"
 	},
 	GEMS = {
 		name = "Gems",
-		emoji = 💎,
+		emoji = "GEM",
 		description = "Premium currency for special purchases"
 	}
 }
@@ -70,8 +70,8 @@ function EconomyManager:InitializeWallet(player)
 	self.transactionHistory[userId] = {}
 	
 	print("💰 " .. player.Name .. " wallet initialized")
-	print("  ⭐ Gold: " .. self.playerWallets[userId].gold)
-	print("  🚧 Silver: " .. self.playerWallets[userId].silver)
+	print("  Gold: " .. self.playerWallets[userId].gold)
+	print("  Silver: " .. self.playerWallets[userId].silver)
 	return self.playerWallets[userId]
 end
 
